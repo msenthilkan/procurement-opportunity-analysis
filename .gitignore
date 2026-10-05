@@ -1,0 +1,7 @@
+# Never commit real company exports or report workbooks
+data/
+*.xlsx
+!sample-data/*.xlsx
+~$*
+.DS_Store
+__pycache__/
