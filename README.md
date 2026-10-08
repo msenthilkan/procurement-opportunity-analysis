@@ -1,4 +1,4 @@
-# Procurement catalogue and contract opportunity analysis (Excel Power Query)
+# Procurement Buying channel Algorithm 
 
 An Excel-only pipeline that turns raw e-procurement exports into a refreshable view of **how much spend goes through catalogues and contracts**, **who actually approves it**, and **which categories to move on-platform first**.
 
