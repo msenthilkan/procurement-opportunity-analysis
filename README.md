@@ -63,6 +63,27 @@ All thresholds are settings at the top of the query.
 
 ![Non-catalogue by category](docs/images/noncat_by_category.png)
 
+## Scenarios covered by the sample data
+
+The synthetic data is built so that every rule fires at least once: matching problems (unmapped, ambiguous, new country), every buying channel and approval route, every scope tier, every opportunity route, all nine country action types, the commodity plan variants and all P-card flags. `scripts/check_scenarios.py` checks 60 scenarios and currently passes all of them. See **[docs/scenarios.md](docs/scenarios.md)** for what each scenario means, how the data creates it and what you should see, and [docs/simulation/scenario_results.md](docs/simulation/scenario_results.md) for the latest run.
+
+## Country and commodity actions
+
+`qCountryActions` gives every country x commodity with off-catalogue spend one specific action, chosen in this order:
+
+| Action type | When | Why it comes first |
+| --- | --- | --- |
+| Exclude | Scope tier D or E | Not part of the Ariba catalogue target |
+| Classify first | No scope tier (not in taxonomy, ambiguous, or not in the scope matrix) | Scope must be decided before sourcing |
+| Quick win: leakage | The top off-catalogue supplier already has a catalogue/contract in the same country | Agreement exists; only buying behaviour must change |
+| Quick win: extend agreement | That supplier has a catalogue/contract in another country | Terms exist; ask the supplier to add the country |
+| Replicate other country | The commodity is on catalogue/contract elsewhere with another supplier | A proven set-up to copy |
+| Regional deal | The same top supplier is used off-catalogue in several countries | Combine volumes in one negotiation |
+| Business-led | Scope tier C | Business selects; procurement reviews terms |
+| New agreement | None of the above | Run the category playbook |
+
+Priority is set within each country: High for the commodities making up the first 50% of the country's addressable off-catalogue spend, Medium up to 80%. `qCommodityPlan` rolls this up per commodity: quick-win countries, countries to copy a set-up to, and whether to aim for one regional agreement or local ones. Example output from the sample data: [docs/simulation/country_actions.csv](docs/simulation/country_actions.csv), [docs/simulation/commodity_plan.csv](docs/simulation/commodity_plan.csv).
+
 ## P-card simulation (optional module)
 
 P-card is optional. Without a card programme the pipeline runs on Ariba requisitions alone: `qAllSpend` uses Output only, and `qOpportunities` drops all P-card logic and columns automatically when there are no card lines. To use it, load the card statement through `qPCardOut` and change one line in `qAllSpend.pq` (see the comment at the top). The Python preview always runs the full simulation.
@@ -91,12 +112,18 @@ powerquery/
   qPCardOut.pq           card statement -> spend lines, MCC mapping, compliance flags
   qAllSpend.pq           appends requisitions and card lines into one table
   qTaxonomyPolicy.pq     optional: adds scope tier, category route and P-card policy from a scope matrix
+  qCountryActions.pq     practical action per country x commodity (leakage, extend, replicate, regional, new)
+  qCommodityPlan.pq      one plan per commodity across countries
   qOpportunities.pq      Pareto ranking, suggested route and P-card action
 sample-data/             synthetic input files with the real export layouts (incl. qPCard, qMCCMap)
 scripts/
   generate_sample_data.py   recreates the sample files, including the P-card simulation
   preview_dashboard.py      re-implements the logic in pandas to cross-check, draw charts and write docs/simulation/
+  preview_country_actions.py  mirrors qCountryActions / qCommodityPlan on the sample data
+  check_scenarios.py        checks that every scenario in docs/scenarios.md is triggered (PASS/FAIL)
+  sample_scope_matrix.py    scope tiers and routes for the sample commodities
 docs/
+  scenarios.md           every scenario the sample data covers, explained
   setup-guide.md         step-by-step build in Excel
   dashboard-pivots.md    pivot recipes for the leadership slides
   design-notes.md        design decisions and problems solved
@@ -106,7 +133,7 @@ docs/
 ## Try it
 
 1. Download `sample-data/` into one folder.
-2. Follow [docs/setup-guide.md](docs/setup-guide.md). It takes about 20 minutes and covers loading the five files, pasting the two queries, and loading Output and qOpportunities.
+2. Follow [docs/setup-guide.md](docs/setup-guide.md). It takes about 30 minutes and covers loading the input files, pasting the queries, and loading the result tables.
 3. Build the pivots in [docs/dashboard-pivots.md](docs/dashboard-pivots.md).
 
 To check the logic without Excel:
@@ -115,6 +142,8 @@ To check the logic without Excel:
 pip install pandas openpyxl matplotlib
 python scripts/generate_sample_data.py
 python scripts/preview_dashboard.py
+python scripts/preview_country_actions.py
+python scripts/check_scenarios.py
 ```
 
 ## Skills demonstrated
