@@ -91,7 +91,7 @@ let
             // Category playbook wins for business-led tiers, and wherever it rules out a catalogue
             base = if catRoute = null then freq
                 else if tier = "C" then catRoute
-                else if freq = "Catalogue" and not Text.Contains(catRoute, "Catalogue") then catRoute
+                else if freq = "Catalogue" and not Text.Contains(catRoute, "catalogue", Comparer.OrdinalIgnoreCase) then catRoute
                 else freq,
             tailFit = policy = "Allowed"
                 and ([#"P-card Candidate Lines"] + [#"P-card Lines"]) / lines >= PCardMinShare,

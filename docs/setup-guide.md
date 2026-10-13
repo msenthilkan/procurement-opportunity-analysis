@@ -1,10 +1,10 @@
 # Setup guide
 
-Builds the workbook from the seven input files. Works in Excel for Microsoft 365 or Excel 2019+ on Windows.
+Builds the workbook from the input files in `sample-data/` (or your own exports with the same columns). Works in Excel for Microsoft 365 or Excel 2019+ on Windows.
 
 ## 1. Folder
 
-Put the seven files from `sample-data/` (or your own exports with the same columns) in one folder, then create a new workbook in the same folder, for example `Spend Opportunity Report.xlsx`. All queries, pivots and the dashboard live in this workbook.
+Put the files from `sample-data/` (or your own exports with the same columns) in one folder, then create a new workbook in the same folder, for example `Spend Opportunity Report.xlsx`. All queries, pivots and the dashboard live in this workbook.
 
 | File | Query name | Contents |
 | --- | --- | --- |
@@ -15,12 +15,15 @@ Put the seven files from `sample-data/` (or your own exports with the same colum
 | tblProcurementGroup.xlsx | `qProcurementGroup` | One column, `Email`, listing procurement approvers |
 | qPCard.xlsx | `qPCard` | Card issuer statement, one row per transaction, amounts in reporting currency |
 | qMCCMap.xlsx | `qMCCMap` | Merchant category code to L3 commodity, with an MCC policy for codes outside the taxonomy |
+| tblScopeMatrix.xlsx | `tblScopeMatrix` | Scope tier, proposed route, lead and playbook steps per L3 (see section 3b). Load the **table** `tblScopeMatrix`, not the sheet |
+
+The two card files are only needed with a P-card programme. When you use the scope matrix, load the taxonomy file as the query `qTaxonomyRaw` (section 3b).
 
 `qTaxonomy` now has an optional `P-card Policy` column (Allowed, Restricted, Blocked). `qSpend` has an optional `[PO-P&I] Payment Method` column; lines containing "card" become **P-card on PO**. Both queries still work if these columns are missing.
 
 **Card statement tips:** use the issuer's billing amount converted to your reporting currency; keep the PO number field if your card programme pays Ariba POs (Ariba "P-card on PO"), because that is how double counting is prevented.
 
-## 2. Load the seven inputs
+## 2. Load the inputs
 
 For each file:
 
@@ -41,7 +44,7 @@ In `Output.pq`, check the settings block at the top: the taxonomy code column, t
 
 ## 3b. Optional: scope tiers and P-card policy from a scope matrix
 
-If you keep a scope matrix (an Excel table `tblScopeMatrix` with columns `L3 Commodity`, `Scope Tier`, `Proposed Route`, `P-card Policy`) in the workbook:
+If you keep a scope matrix (an Excel table with columns `L3 Commodity`, `Scope Tier`, `Proposed Route`, optionally `P-card Policy`) in the workbook, load it with **Data → From Table/Range** as a connection-only query named `tblScopeMatrix`. qTaxonomy reads that query; reading the sheet directly with `Excel.CurrentWorkbook()` would trigger a Formula.Firewall error.
 
 1. Rename the raw taxonomy query to `qTaxonomyRaw`.
 2. Add a blank query named `qTaxonomy` and paste `powerquery/qTaxonomyPolicy.pq`.
@@ -49,6 +52,10 @@ If you keep a scope matrix (an Excel table `tblScopeMatrix` with columns `L3 Com
 4. In `qOpportunities`, `ExcludeTiers = {"D", "E"}` leaves other-channel and non-addressable spend out of the ranking, tier C takes the category route, and a "Catalogue" suggestion is replaced by the category route where the playbook rules out a catalogue.
 
 Without the matrix these columns are blank and every query behaves as before.
+
+## 3c. Optional: country and commodity actions
+
+Add `qCountryActions.pq` and then `qCommodityPlan.pq` as blank queries and load both to sheets. They need Output with the scope-tier columns (section 3b) and the `tblScopeMatrix` query; a `Practical solution` column in the matrix is used for "New agreement" rows. Refresh them after Output.
 
 ## 4. Load destinations
 

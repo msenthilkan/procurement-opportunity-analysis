@@ -83,6 +83,26 @@ for i, (l1, l2, l3, short, led, _mean, _w, _cat, pcard) in enumerate(TAXONOMY, s
                      "Centre-led" if led.startswith("Procurement") else "Local",
                      "Strategic" if i % 3 == 0 else "Tactical",
                      "Contract" if i % 2 else "Catalogue", pcard])
+# Scenario commodities (scripted below; see docs/scenarios.md). Two rows share the short name
+# "Lab Testing" on purpose (ambiguous match); "Laboratory Supplies" is not in the scope matrix.
+# (L1 family, L2 category, L3 long, L3 short, led by, P-card policy)
+SCENARIO_TAX = [
+    ("Facilities Management", "Workwear", "Protective Workwear", "Workwear", "Procurement Led", "Restricted"),
+    ("Transport, Logistics, Warehousing", "Courier & Postal", "Courier Services", "Courier", "Procurement Led", "Restricted"),
+    ("Facilities Management", "Hygiene", "Pest Control Services", "Pest control", "Procurement Led", "Blocked"),
+    ("Sales, Communication & Marketing", "Digital Marketing", "Digital Analytics Services", "Digital analytics", "Business Led", "Blocked"),
+    ("Professional Services", "Language Services", "Translation Services", "Translation", "Procurement Led", "Restricted"),
+    ("Professional Services", "Strategy Advisory", "Corporate Strategy Advisory", "Strategy advisory", "Business Led", "Blocked"),
+    ("Sales, Communication & Marketing", "Trade Investment", "Customer Rebates", "Rebates", "Business Led", "Blocked"),
+    ("Real Estate", "Leases", "Office Rent", "Rent", "Business Led", "Blocked"),
+    ("Research & Quality", "Lab Supplies", "Laboratory Supplies", "Lab supplies", "Procurement Led", "Allowed"),
+    ("Research & Quality", "Testing", "Lab Testing - Microbiology", "Lab Testing", "Business Led", "Restricted"),
+    ("Research & Quality", "Testing", "Lab Testing - Chemistry", "Lab Testing", "Business Led", "Restricted"),
+]
+for j, (l1, l2, l3, short, led, pcard) in enumerate(SCENARIO_TAX, start=len(TAXONOMY) + 1):
+    tax_rows.append(["Indirect", f"F{j:02d}", l1, f"C{j:03d}", l2, f"CM{j:04d}", short, l3,
+                     f"Synthetic description for {short.lower()}", led,
+                     "Centre-led" if led.startswith("Procurement") else "Local", "Tactical", "Contract", pcard])
 save("qTaxonomy",
      ["Level 0 (Group)", "Purchasing Family number", "Level 1 (Family)", "Purchasing Category number",
       "Level 2 (Category)", "Purchasing Commodity number", "Level 3 (Commodity) - Short",
@@ -186,6 +206,79 @@ for l3, n, mean in TAIL:
                            rng.choice([t[2], t[3]]), f"ERP-{rng.randint(100, 999)}", us_date(d),
                            round(rng.uniform(0.5, 48), 1), 1, amt, amt, 1, "Invoice"])
         appr_rows.append([rid, us_date(d), country, t[2], "Non-Catalog Item", "", approver, amt])
+
+# Scenario requisitions: each block makes one rule fire on purpose (docs/scenarios.md).
+srng = random.Random(11)  # own stream; earlier rows are unchanged
+scn_po_date = dt.date(2026, 3, 1)
+
+
+def add_req(country, supplier, commodity, amount, catalog=False, contract="", proc_approver=False,
+            approval="business"):
+    """approval: "business" (+ procurement if proc_approver), "procurement" only, or "none"."""
+    global req_no
+    req_no += 1
+    rid = f"PR{req_no}"
+    d = scn_po_date + dt.timedelta(days=srng.randint(0, 180))
+    line_type = "Catalog Item" if catalog else "Non-Catalog Item"
+    if approval == "procurement":
+        approvers = [procurement[1]]
+    elif approval == "none":
+        approvers = []
+    else:
+        approvers = [srng.choice(people[10:])] + ([procurement[0]] if proc_approver else [])
+    amt = round(amount * srng.uniform(0.85, 1.15), 2)
+    spend_rows.append([rid, supplier, us_date(d), country, contract, line_type, "Ordered",
+                       f"GL {commodity}", line_type, f"PO{req_no}", f"UNSPSC-{srng.randint(10, 99)}",
+                       commodity, f"ERP-{srng.randint(100, 999)}", us_date(d),
+                       round(srng.uniform(0.5, 48), 1), 1, amt, amt, len(approvers), "Invoice"])
+    for a in approvers:
+        appr_rows.append([rid, us_date(d), country, commodity, line_type, contract, a, amt])
+
+
+def add_many(n, *args, **kw):
+    for _ in range(n):
+        add_req(*args, **kw)
+
+
+# S-LEAK: catalogue with WW-1 in UAE, yet UAE still buys from WW-1 off-catalogue
+add_many(15, "AE01", "Supplier WW-1", "Protective Workwear", 120, catalog=True)
+add_many(10, "AE01", "Supplier WW-1", "Protective Workwear", 150, proc_approver=True)
+add_many(2, "AE01", "Supplier WW-2", "Protective Workwear", 140)
+# S-EXTEND: CR-1 is on catalogue in USA only; Turkey buys from CR-1 off-catalogue
+add_many(20, "US01", "Supplier CR-1", "Courier Services", 60, catalog=True)
+add_many(12, "TR01", "Supplier CR-1", "Courier Services", 70)
+add_many(3, "TR01", "Supplier CR-3", "Courier Services", 65)
+# S-REPLICATE: contract with PC-1 in Germany; Turkey and South Africa use other suppliers
+add_many(12, "DE01", "Supplier PC-1", "Pest Control Services", 400, contract="CW-SCN-01")
+add_many(8, "TR01", "Supplier PC-2", "Pest Control Services", 380)
+add_many(6, "ZA01", "Supplier PC-3", "Pest Control Services", 350)
+# S-REGIONAL: no agreement anywhere; DA-1 is the top supplier in USA, UAE and Turkey
+add_many(6, "US01", "Supplier DA-1", "Digital Analytics Services", 9000)
+add_many(1, "US01", "Supplier DA-4", "Digital Analytics Services", 5000)
+add_many(4, "AE01", "Supplier DA-1", "Digital Analytics Services", 8000)
+add_many(1, "AE01", "Supplier DA-5", "Digital Analytics Services", 4000)
+add_many(3, "TR01", "Supplier DA-1", "Digital Analytics Services", 7000)
+# S-NEW + S-OVERRIDE: no agreement, different supplier per country; many small lines
+# (the frequency rule would say Catalogue, the scope matrix says rate-card contract)
+add_many(16, "DE01", "Supplier TR-1", "Translation Services", 250, proc_approver=True)
+add_many(10, "DE01", "Supplier TR-2", "Translation Services", 230)
+add_many(4, "CA01", "Supplier TR-3", "Translation Services", 300)
+# S-BUSINESS: tier C, chosen by leadership
+add_many(2, "US01", "Supplier CS-1", "Corporate Strategy Advisory", 120000)
+# S-EXCL-E: non-addressable spend raised on requisitions
+for c in ("US01", "AE01", "DE01", "TR01"):
+    add_many(6, c, f"Customer {c[:2]}-01", "Customer Rebates", 80000)
+add_many(12, "DE01", "Landlord DE-1", "Office Rent", 35000)
+add_many(12, "AE01", "Landlord AE-1", "Office Rent", 30000)
+# S-NOTCLASS: in the taxonomy but not in the scope matrix
+add_many(8, "DE01", "Supplier LS-1", "Laboratory Supplies", 600)
+# S-AMBIG: short name shared by two taxonomy rows
+add_many(3, "US01", "Supplier LT-1", "Lab Testing", 2500)
+# S-APPR-PROC: approved by procurement only; S-APPR-NONE: no rows in the approver export
+add_many(2, "AE01", "Supplier WW-1", "Protective Workwear", 160, approval="procurement")
+add_many(1, "DE01", "Landlord DE-1", "Office Rent", 35000, approval="none")
+# S-COUNTRY: purchasing organisation not in CountryMap
+add_many(3, "BR01", "Supplier BR-1", "Office Supplies and Stationery", 200)
 
 save("qSpend",
      ["[REQ] Requisition ID", "[REQ]Supplier (Common Supplier)", "[REQ]Requisition Date (Date)",
@@ -309,5 +402,23 @@ save("qPCard",
       "Purchase Org", "Merchant Name", "MCC", "Amount (Reporting Currency)", "Receipt Attached",
       "PO Reference", "Commodity (Cardholder Coded)", "Reconciliation Status"], card_rows)
 print(f"Wrote {len(card_rows)} P-card transactions ({len(card_on_po)} are card-paid Ariba POs)")
+
+# ---------------------------------------------------------------- scope matrix (Excel table)
+from openpyxl.worksheet.table import Table, TableStyleInfo  # noqa: E402
+import sys  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from sample_scope_matrix import ROWS as SCOPE_ROWS  # noqa: E402
+
+wb = Workbook()
+ws = wb.active
+ws.title = "tblScopeMatrix"
+ws.append(["L3 Commodity", "Category", "Scope Tier", "Proposed Route", "Lead", "Practical solution"])
+for r in SCOPE_ROWS:
+    ws.append(list(r))
+bold_header(ws)
+tbl = Table(displayName="tblScopeMatrix", ref=f"A1:F{ws.max_row}")
+tbl.tableStyleInfo = TableStyleInfo(name="TableStyleMedium2", showRowStripes=True)
+ws.add_table(tbl)
+wb.save(OUT / "tblScopeMatrix.xlsx")
 
 print(f"Wrote {len(spend_rows)} spend lines and {len(appr_rows)} approver rows to {OUT}")

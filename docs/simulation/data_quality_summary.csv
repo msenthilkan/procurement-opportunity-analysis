@@ -1,0 +1,23 @@
+Check,Value,Lines,Spend
+Taxonomy Match,Ambiguous,3,7113.78
+Taxonomy Match,Matched,3992,32399774.36
+Taxonomy Match,Unmapped,109,1579739.1400000001
+Country,Country mapped,4101,33986038.81
+Country,Country not mapped,3,588.47
+Scope Tier,A,1974,3354581.65
+Scope Tier,B,1389,23655608.27
+Scope Tier,C,60,858974.98
+Scope Tier,D,512,1814901.45
+Scope Tier,E,49,2710931.0
+Scope Tier,Not classified,120,1591629.93
+Buying Channel,Catalogue,810,706132.66
+Buying Channel,Contract,344,4498527.61
+Buying Channel,Non-catalogue,2631,28032711.82
+Buying Channel,P-card (off-platform),1148,583370.34
+Buying Channel,P-card on PO,271,229604.87
+Buying Channel,Unclassified,48,519650.32
+Approval Route,Business/Finance only,2528,25219983.45
+Approval Route,No approval data,1,38371.63
+Approval Route,Procurement + Business/Finance,1573,8727934.89
+Approval Route,Procurement only,2,337.31
+Approvers,Requisitions with approver not in user master,31,

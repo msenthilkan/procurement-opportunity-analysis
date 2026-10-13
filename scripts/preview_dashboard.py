@@ -20,6 +20,7 @@ COUNTRY = {"AE01": "UAE", "CA01": "Canada", "DE01": "Germany", "ID01": "Indonesi
 COLORS = {"Catalogue": "#0E7C6B", "Contract": "#3E56C8", "P-card on PO": "#E0A526",
           "P-card (off-platform)": "#F2C76E", "Non-catalogue": "#C8463D", "Unclassified": "#A3ACB6"}
 TARGET, MIN_LINES, MAX_AVG = 0.75, 20, 1000
+EXCLUDE_TIERS = ("D", "E")   # same as ExcludeTiers in qOpportunities.pq
 SINGLE_LIMIT, PCARD_LINE_MAX, PCARD_MIN_SHARE = 2500, 500, 0.5   # same settings as the .pq files
 
 
@@ -37,11 +38,20 @@ proc = {key(e) for e in pd.read_excel(DATA / "tblProcurementGroup.xlsx")["Email"
 alias = pd.concat([tax.assign(_k=tax["Level 3 (Commodity) - Short"].map(key)),
                    tax.assign(_k=tax["Level 3 (Commodity) - Long"].map(key))]).drop_duplicates()
 counts = alias.groupby("_k").size()
-lookup = alias[alias["_k"].map(counts) == 1].set_index("_k")
+lookup = alias[alias["_k"].map(counts) == 1].set_index("_k").copy()
+# Scope matrix (qTaxonomyPolicy): Scope Tier and Proposed Route by L3 long name, then short name
+matrix = pd.read_excel(DATA / "tblScopeMatrix.xlsx")
+mx = matrix.assign(_m=matrix["L3 Commodity"].map(key)).drop_duplicates("_m").set_index("_m")
+for col in ("Scope Tier", "Proposed Route"):
+    by_long = lookup["Level 3 (Commodity) - Long"].map(key).map(mx[col])
+    by_short = lookup["Level 3 (Commodity) - Short"].map(key).map(mx[col])
+    lookup[col] = by_long.fillna(by_short)
 spend["_k"] = spend["[REQ]Commodity (Commodity (L3))"].map(key)
 TAXCOLS = ["Level 1 (Family)", "Level 2 (Category)", "Level 3 (Commodity) - Long",
-           "Procurement Or Business Led", "P-card Policy"]
+           "Procurement Or Business Led", "P-card Policy", "Scope Tier", "Proposed Route"]
 df = spend.join(lookup[TAXCOLS], on="_k")
+df["Taxonomy Match"] = df["_k"].map(lambda k: "Blank" if k == "" else "Unmapped" if k not in counts.index
+                                    else "Matched" if counts[k] == 1 else "Ambiguous")
 
 # Buying channel
 lt = df["[REQ] Line Type"].map(key)
@@ -54,7 +64,12 @@ df.loc[pay_card & ~lt.eq("catalog item") & ~has_contract, "Buying Channel"] = "P
 df.loc[has_contract & ~lt.eq("catalog item"), "Buying Channel"] = "Contract"
 df.loc[lt.eq("catalog item"), "Buying Channel"] = "Catalogue"
 df["Source System"] = "Ariba requisition"
-df["Country"] = df["[REQ]Purchasing Company (Purchase Organization Id)"].map(COUNTRY)
+def country(code):
+    code = str(code).strip().upper() if pd.notna(code) else ""
+    return "Blank" if code == "" else COUNTRY.get(code, f"{code} (not mapped)")
+
+
+df["Country"] = df["[REQ]Purchasing Company (Purchase Organization Id)"].map(country)
 
 # Approvers: name -> email (active first) -> procurement flag, one row per requisition
 users["_rank"] = users["Active"].map(key).isin(["yes", "true", "1"]).map({True: 0, False: 1})
@@ -66,6 +81,8 @@ route = a.groupby("[REQ] Requisition ID")["proc"].agg(["any", "all"])
 route["Approval Route"] = route.apply(lambda r: "Procurement only" if r["all"] else
                                       ("Procurement + Business/Finance" if r["any"] else "Business/Finance only"), axis=1)
 df = df.join(route["Approval Route"], on="[REQ] Requisition ID")
+df["Approval Route"] = df["Approval Route"].fillna("No approval data")
+not_in_list = a.loc[a["email"].isna(), "[REQ] Requisition ID"].nunique()
 
 # ---------------------------------------------------------------- P-card (qPCardOut)
 card = pd.read_excel(DATA / "qPCard.xlsx", dtype={"PO Reference": str})
@@ -112,9 +129,10 @@ card["P-card Compliance"] = card["P-card Flags"].map(
 cardout = pd.DataFrame({
     "[REQ] Requisition ID": "PCARD-" + card["Transaction ID"].astype(str),
     "[REQ]Supplier (Common Supplier)": card["Merchant Name"],
+    "[REQ]Requisition Date (Date)": card["Transaction Date"],
     "[REQ]Commodity (Commodity (L3))": card["[REQ]Commodity (Commodity (L3))"],
     "sum(Line Count)": 1, "sum(Requisition Spend)": card[amt_c], "sum(PO Spend)": card[amt_c],
-    "Country": card["Purchase Org"].map(COUNTRY), "Buying Channel": "P-card (off-platform)",
+    "Country": card["Purchase Org"].map(country), "Buying Channel": "P-card (off-platform)",
     "Payment Method": "P-card", "Approval Route": "Card (no requisition)", "Source System": "P-card statement",
     "Cardholder": card["Cardholder Name"], "MCC": card["_m"], "MCC Description": card["MCC Description"],
     "P-card Flags": card["P-card Flags"], "P-card Compliance": card["P-card Compliance"],
@@ -160,6 +178,7 @@ fig.tight_layout()
 fig.savefig(IMG / "noncat_by_category.png", dpi=150)
 
 # Chart 3: opportunity Pareto (same rules as qOpportunities.pq)
+non = non[~non["Scope Tier"].fillna("").str[:1].isin(EXCLUDE_TIERS)].copy()   # ExcludeTiers
 non["Commodity"] = non["Level 3 (Commodity) - Long"].fillna(non["[REQ]Commodity (Commodity (L3))"] + " (not in taxonomy)")
 non["_card"] = non[amt].where(non["Channel Group"].eq("P-card"), 0)
 _req_non = non["Buying Channel"].isin(["Non-catalogue", "Unclassified"]) & non["sum(Requisition Spend)"].le(PCARD_LINE_MAX)
@@ -170,7 +189,9 @@ g = non.groupby("Commodity").agg(spend=(amt, "sum"), lines=("sum(Line Count)", "
                                  suppliers=("[REQ]Supplier (Common Supplier)", "nunique"),
                                  card_spend=("_card", "sum"), cand=("_cand", "sum"), cand_n=("_cand_n", "sum"), card_n=("_card_n", "sum"),
                                  policy=("P-card Policy", lambda x: x.dropna().iloc[0] if x.notna().any() else None),
-                                 category=("Level 2 (Category)", lambda x: x.dropna().iloc[0] if x.notna().any() else "Not in taxonomy")
+                                 category=("Level 2 (Category)", lambda x: x.dropna().iloc[0] if x.notna().any() else "Not in taxonomy"),
+                                 tier=("Scope Tier", lambda x: x.dropna().iloc[0] if x.notna().any() else None),
+                                 cat_route=("Proposed Route", lambda x: x.dropna().iloc[0] if x.notna().any() else None)
                                  ).sort_values("spend", ascending=False)
 top_share = non.groupby(["Commodity", "[REQ]Supplier (Common Supplier)"])[amt].sum().groupby(level=0).max()
 g["top_share"] = top_share / g["spend"]
@@ -182,11 +203,21 @@ g["in_scope"] = g["before"] < TARGET
 def route(r):
     avg = r.spend / max(r.lines, 1)
     if r.lines >= MIN_LINES and avg <= MAX_AVG:
-        base = "Catalogue"
+        freq = "Catalogue"
     elif r.top_share >= 0.6:
-        base = "Contract with top supplier"
+        freq = "Contract with top supplier"
     else:
-        base = "Contract, consolidate suppliers" if r.suppliers >= 5 else "Contract"
+        freq = "Contract, consolidate suppliers" if r.suppliers >= 5 else "Contract"
+    # Category playbook wins for tier C, and wherever it rules out a catalogue
+    tier = r.tier[0] if isinstance(r.tier, str) else ""
+    if not isinstance(r.cat_route, str):
+        base = freq
+    elif tier == "C":
+        base = r.cat_route
+    elif freq == "Catalogue" and "catalogue" not in r.cat_route.lower():
+        base = r.cat_route
+    else:
+        base = freq
     tail_fit = r.policy == "Allowed" and (r.cand_n + r.card_n) / max(r.lines, 1) >= PCARD_MIN_SHARE
     if r.category == "Not in taxonomy" and r.policy == "Blocked":
         return "Prohibited: follow up with cardholder"
@@ -254,18 +285,34 @@ fig.tight_layout()
 fig.savefig(IMG / "pcard_compliance.png", dpi=150)
 
 # Simulation result tables (CSV renders as a table on GitHub)
-out = g.reset_index()[["Commodity", "category", "spend", "cum", "in_scope", "route", "card_spend", "policy", "card_action",
+out = g.reset_index()[["Commodity", "category", "spend", "cum", "in_scope", "tier", "route", "cat_route",
+                       "card_spend", "policy", "card_action",
                        "cand_n", "cand", "lines", "suppliers", "top_share"]]
-out.columns = ["Commodity", "Category", "Off-catalogue Spend", "Cumulative Share", "In Scope", "Suggested Route",
+out.columns = ["Commodity", "Category", "Off-catalogue Spend", "Cumulative Share", "In Scope", "Scope Tier",
+               "Suggested Route", "Category Route",
                "P-card Spend", "P-card Policy", "P-card Action", "P-card Candidate Lines", "P-card Candidate Spend",
                "Lines", "Suppliers", "Top Supplier Share"]
 out.round(3).to_csv(SIM / "opportunities.csv", index=False)
+req = df[df["Source System"].eq("Ariba requisition")]
+dq = pd.concat([
+    req.groupby("Taxonomy Match")[amt].agg(["size", "sum"]).assign(Check="Taxonomy Match"),
+    req.groupby(req["Country"].str.contains("not mapped").map({True: "Country not mapped", False: "Country mapped"}))[amt]
+       .agg(["size", "sum"]).assign(Check="Country"),
+    req.groupby(req["Scope Tier"].fillna("Not classified").str[:1].replace("N", "Not classified"))[amt]
+       .agg(["size", "sum"]).assign(Check="Scope Tier"),
+    df.groupby("Buying Channel")[amt].agg(["size", "sum"]).assign(Check="Buying Channel"),
+    req.groupby("Approval Route")[amt].agg(["size", "sum"]).assign(Check="Approval Route"),
+    pd.DataFrame({"size": [not_in_list], "sum": [None]}, index=["Requisitions with approver not in user master"])
+       .assign(Check="Approvers")])
+dq = dq.reset_index().rename(columns={"index": "Value", "size": "Lines", "sum": "Spend"})
+dq[["Check", "Value", "Lines", "Spend"]].round(0).to_csv(SIM / "data_quality_summary.csv", index=False)
 ch = df.pivot_table(index="Country", columns="Buying Channel", values=amt, aggfunc="sum", fill_value=0).round(0)
 ch = ch[[c for c in COLORS if c in ch.columns]]
 ch["Total"] = ch.sum(axis=1)
 ch.to_csv(SIM / "spend_by_country_channel.csv")
 cs = pc.groupby(["P-card Compliance", "P-card Policy"]).agg(Transactions=(amt, "size"), Spend=(amt, "sum")).round(0)
 cs.to_csv(SIM / "pcard_compliance_summary.csv")
+fl.groupby("Flag")[amt].agg(Transactions="size", Spend="sum").round(0).to_csv(SIM / "pcard_flag_summary.csv")
 flagged = pc[pc["P-card Compliance"].eq("Non-compliant")].sort_values(amt, ascending=False)
 flagged[["[REQ] Requisition ID", "Country", "Cardholder", "[REQ]Supplier (Common Supplier)", "MCC", "MCC Description",
          "[REQ]Commodity (Commodity (L3))", amt, "P-card Policy", "P-card Flags"]].head(50).round(2).to_csv(
