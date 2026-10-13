@@ -45,3 +45,33 @@ A running total is computed once over the buffered, sorted list. A commodity is 
 ## Cross-check outside Excel
 
 `scripts/preview_dashboard.py` re-implements the same rules in pandas. Running both on the sample data and comparing totals is a cheap way to catch logic errors.
+
+## P-card is a payment method, so it needs two entry points
+
+Card spend reaches the data in two ways. An Ariba PO can be paid by card ("P-card on PO"): the line is in the spend export with payment method P-Card. Cardholders also buy directly from merchants: those transactions only exist on the issuer statement. Output handles the first; `qPCardOut` handles the second, and `qAllSpend` appends them.
+
+Catalogue and contract keep priority over payment method: a catalogue order paid by card is still a catalogue order. The channel order is Catalogue, Contract, P-card on PO, Non-catalogue, Unclassified, and statement lines are always P-card (off-platform), so every line still counts once.
+
+## No double counting between the PO and the card statement
+
+A card-paid PO appears twice: once as a requisition line and once as a card transaction. The card feed carries the PO number, so `qPCardOut` drops any transaction whose PO number exists in Output. In the simulation all 309 card-paid POs are caught. If your issuer does not pass the PO number, match on supplier, amount and date within a few days instead, and check the reconciliation total after each refresh.
+
+## Categorising card lines
+
+The statement has no commodity. The query uses, in order: the commodity the cardholder chose at reconciliation, the L3 mapped from the merchant category code, and finally the MCC description itself. MCCs are broad (5045 covers computers and software), so the cardholder-coded commodity wins when present. MCCs outside the taxonomy keep their own policy in `qMCCMap`, which is how cash withdrawals and gambling are always flagged.
+
+## Policy lives in the taxonomy
+
+`P-card Policy` is a column on the taxonomy, so the category owner decides it once per L3, and both the compliance flags and the opportunity routes read the same value. For card lines outside the taxonomy, the MCC policy is used.
+
+## Compliance flags are additive, compliance status is one value
+
+A transaction can carry several flags (for example, restricted category and missing receipt), joined with "; ". `P-card Compliance` reduces them to one value: Non-compliant for blocked category, over limit, possible split or a catalogue/contract supplier; Review for restricted category or missing receipt; otherwise Compliant. Pivots on the single value always reconcile.
+
+Split detection groups by cardholder, merchant and date. It flags only transactions under the limit whose group total is above it, which is the pattern a split leaves. Merchant names on statements often differ from Ariba supplier names, so the catalogue/contract supplier check is conservative; add a merchant-to-supplier mapping if you need it.
+
+## The P-card route is about transactions, not spend
+
+Averaging a whole commodity hides its tail: a category with a few large contracts and hundreds of small one-off orders looks like a contract category. The first version of the rule never fired in the simulation for exactly this reason. The rule now counts lines: if at least half the lines are already on card or are non-catalogue POs of 500 or less, and the category allows cards, the card fits the tail. Catalogue still wins when the frequency rule says catalogue. When the average line is large, the route says both, for example "Contract, consolidate suppliers + P-card for tail", and `P-card Action` gives the number of POs to move to card.
+
+The frequency rules do not know about channels such as a travel booking tool, so a blocked-on-card category like hotels can still get a "Catalogue" suggestion. Category-level overrides belong in a scope matrix joined on the L3 name.

@@ -1,0 +1,51 @@
+[REQ] Requisition ID,Country,Cardholder,[REQ]Supplier (Common Supplier),MCC,MCC Description,[REQ]Commodity (Commodity (L3)),sum(PO Spend),P-card Policy,P-card Flags
+PCARD-T500276,USA,Sam Nguyen,Merchant 1469,7392,"Management, consulting and public relations",Management Consulting,11534.22,Blocked,Blocked category; Over single limit
+PCARD-T500446,UAE,Hayden Yilmaz,Merchant 1549,5811,Caterers,Events,6067.0,Restricted,Restricted category; Over single limit
+PCARD-T500927,Turkey,Hayden Silva,Merchant 3495,5943,"Stationery stores, office and school supply",Office Supplies and Stationery,6021.02,Restricted,Restricted category; Over single limit
+PCARD-T501031,USA,Emerson Silva,Merchant 7063,7011,"Hotels, motels and resorts",Hotels and Accommodation,5843.83,Blocked,Blocked category; Over single limit
+PCARD-T500421,Turkey,Logan Larsen,Merchant 2754,2741,Miscellaneous publishing and printing,POS materials,5758.21,Allowed,Over single limit
+PCARD-T500265,Japan,Avery Garcia,Merchant 8750,5111,"Stationery, office and school supply stores",Office supplies,5541.84,Restricted,Restricted category; Over single limit
+PCARD-T500873,Turkey,Emerson Khan,Merchant 8591,7311,Advertising services,Media buying,5250.71,Restricted,Restricted category; Over single limit
+PCARD-T500791,Turkey,Logan Larsen,Merchant 6295,5251,Hardware stores,Industrial Consumables,5246.56,Allowed,Over single limit
+PCARD-T501070,Turkey,Rowan Tanaka,Merchant 5595,7361,Employment agencies and temporary help,Contingent Labour,4697.39,Blocked,Blocked category; Over single limit
+PCARD-T500279,Japan,Avery Garcia,Merchant 4097,5045,"Computers, peripherals and software",IT Hardware and Peripherals,4512.95,Restricted,Restricted category; Over single limit
+PCARD-T500771,Turkey,Rowan Tanaka,Merchant 7035,7372,Computer programming and data processing,Software Licences and SaaS,4422.87,Restricted,Restricted category; Over single limit
+PCARD-T500602,UAE,Drew Okafor,Merchant 2332,5734,Computer software stores,Software,4416.06,Restricted,Restricted category; Over single limit
+PCARD-T500080,USA,Emerson Silva,Merchant 6207,7392,"Management, consulting and public relations",Management Consulting,4407.78,Blocked,Blocked category; Over single limit
+PCARD-T500925,USA,Casey Yilmaz,Merchant 2102,8299,Schools and educational services,Training,4319.24,Allowed,Over single limit
+PCARD-T500389,USA,Reese Tanaka,Merchant 2340,4215,Courier services,Freight Forwarding,4159.25,Allowed,Over single limit
+PCARD-T500214,USA,Sam Nguyen,Supplier 111,7333,"Commercial photography, art and graphics",POS materials,3907.1,Allowed,Over single limit; Catalogue/contract supplier
+PCARD-T500759,USA,Jordan Silva,Merchant 7965,5943,"Stationery stores, office and school supply",Office supplies,3898.33,Restricted,Restricted category; Over single limit
+PCARD-T500673,Turkey,Emerson Khan,Merchant 4913,6011,Automated cash disbursements,MCC 6011 Automated cash disbursements,3816.86,Blocked,Blocked category; Over single limit
+PCARD-T500082,USA,Rowan Garcia,Supplier 199,8299,Schools and educational services,Training and Development,3796.01,Allowed,Over single limit; Catalogue/contract supplier; Missing receipt
+PCARD-T500625,UAE,Taylor Tanaka,Merchant 4244,7311,Advertising services,Media buying,3605.33,Restricted,Restricted category; Over single limit
+PCARD-T500662,USA,Taylor Larsen,Merchant 7924,5813,Bars and taverns,MCC 5813 Bars and taverns,3439.97,Blocked,Blocked category; Over single limit
+PCARD-T500898,USA,Reese Tanaka,Merchant 3988,5251,Hardware stores,Industrial Consumables,3406.1,Allowed,Over single limit
+PCARD-T500019,Japan,Avery Garcia,Merchant 3683,4225,Public warehousing and storage,Third-party Warehousing,3087.7,Blocked,Blocked category; Over single limit
+PCARD-T500467,Canada,Riley Rossi,Merchant 4592,7699,Miscellaneous repair shops,Maintenance services,2968.16,Restricted,Restricted category; Over single limit
+PCARD-T500217,USA,Jamie Meyer,Merchant 9121,5251,Hardware stores,Industrial Consumables,2855.58,Allowed,Over single limit; Missing receipt
+PCARD-T500394,USA,Casey Yilmaz,Merchant 6930,5045,"Computers, peripherals and software",IT Hardware and Peripherals,2626.34,Restricted,Restricted category; Over single limit
+PCARD-T500413,USA,Kai Novak,Merchant 9314,8111,Legal services and attorneys,Legal Services,2590.11,Blocked,Blocked category; Over single limit
+PCARD-T501104,USA,Sam Nguyen,Merchant 6807,5085,Industrial supplies,Industrial Consumables,2396.62,Allowed,Possible split
+PCARD-T501119,USA,Rowan Garcia,Merchant 3964,7311,Advertising services,Media Buying - Digital and TV,2365.36,Restricted,Restricted category; Possible split
+PCARD-T500590,Turkey,Hayden Silva,Merchant 8508,7392,"Management, consulting and public relations",Consulting,2355.17,Blocked,Blocked category
+PCARD-T501124,USA,Taylor Larsen,Merchant 7784,5045,"Computers, peripherals and software",IT Hardware and Peripherals,2350.55,Restricted,Restricted category; Possible split
+PCARD-T501121,USA,Rowan Garcia,Merchant 3964,7311,Advertising services,Media Buying - Digital and TV,2348.38,Restricted,Restricted category; Possible split
+PCARD-T501144,Canada,Riley Rossi,Merchant 6864,7311,Advertising services,Media Buying - Digital and TV,2331.46,Restricted,Restricted category; Possible split
+PCARD-T501134,USA,Casey Yilmaz,Merchant 5322,2741,Miscellaneous publishing and printing,Promotional and POS Materials,2328.92,Allowed,Possible split
+PCARD-T501123,USA,Taylor Larsen,Merchant 4244,7311,Advertising services,Media Buying - Digital and TV,2306.78,Restricted,Restricted category; Possible split
+PCARD-T501131,UAE,Riley Dubois,Merchant 6930,5045,"Computers, peripherals and software",IT Hardware and Peripherals,2279.62,Restricted,Restricted category; Possible split
+PCARD-T501111,UAE,Riley Dubois,Merchant 6864,7311,Advertising services,Media Buying - Digital and TV,2241.2,Restricted,Restricted category; Possible split
+PCARD-T501136,UAE,Drew Okafor,Merchant 8811,5085,Industrial supplies,Industrial Consumables,2207.48,Allowed,Possible split
+PCARD-T501101,USA,Sam Nguyen,Merchant 7784,5045,"Computers, peripherals and software",IT Hardware and Peripherals,2187.3,Restricted,Restricted category; Possible split
+PCARD-T501128,USA,Emerson Silva,Merchant 8013,5732,Electronics stores,IT Hardware and Peripherals,2174.88,Restricted,Restricted category; Possible split
+PCARD-T501138,Turkey,Rowan Tanaka,Merchant 2998,2741,Miscellaneous publishing and printing,Promotional and POS Materials,2149.68,Allowed,Possible split
+PCARD-T501141,USA,Avery Khan,Merchant 7234,5045,"Computers, peripherals and software",IT Hardware and Peripherals,2140.58,Restricted,Restricted category; Possible split
+PCARD-T500270,UAE,Hayden Yilmaz,Merchant 4240,8111,Legal services and attorneys,Legal,2121.86,Blocked,Blocked category
+PCARD-T501013,Turkey,Drew Khan,Supplier 196,8299,Schools and educational services,Training and Development,2095.44,Allowed,Catalogue/contract supplier
+PCARD-T501143,Canada,Riley Rossi,Merchant 6864,7311,Advertising services,Media Buying - Digital and TV,2075.41,Restricted,Restricted category; Possible split
+PCARD-T501114,USA,Avery Rossi,Merchant 7234,5045,"Computers, peripherals and software",IT Hardware and Peripherals,2072.09,Restricted,Restricted category; Possible split
+PCARD-T501147,UAE,Hayden Yilmaz,Merchant 5297,5732,Electronics stores,IT Hardware and Peripherals,2048.08,Restricted,Restricted category; Possible split
+PCARD-T501117,Turkey,Hayden Silva,Merchant 9946,5732,Electronics stores,IT Hardware and Peripherals,2011.76,Restricted,Restricted category; Possible split
+PCARD-T501130,UAE,Hayden Yilmaz,Merchant 3964,7311,Advertising services,Media Buying - Digital and TV,1993.81,Restricted,Restricted category; Possible split; Missing receipt
+PCARD-T501126,USA,Emerson Silva,Merchant 8013,5732,Electronics stores,IT Hardware and Peripherals,1993.77,Restricted,Restricted category; Possible split

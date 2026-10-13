@@ -1,6 +1,6 @@
 # Dashboard pivots
 
-Build every pivot from the `Output` table (**Insert → PivotTable**) on a sheet named `Pivots`. Use one spend measure everywhere; the examples use `sum(PO Spend)`.
+Build every pivot from the `AllSpend` table (requisitions + P-card) (**Insert → PivotTable**) on a sheet named `Pivots`. Use one spend measure everywhere; the examples use `sum(PO Spend)`.
 
 Layout for every pivot: **Design → Report Layout → Show in Tabular Form**, **Subtotals → Do Not Show**, number format `#,##0`.
 
@@ -8,8 +8,11 @@ Layout for every pivot: **Design → Report Layout → Show in Tabular Form**, *
 
 | Card | Formula | Format |
 | --- | --- | --- |
-| Total spend | `=SUM(Output[sum(PO Spend)])` | `"€"#,##0,,"M"` |
-| Non-catalogue spend | `=SUMIFS(Output[sum(PO Spend)],Output[Buying Channel],"Non-catalogue")+SUMIFS(Output[sum(PO Spend)],Output[Buying Channel],"Unclassified")` | `"€"#,##0,,"M"` |
+| Total spend | `=SUM(AllSpend[sum(PO Spend)])` | `"€"#,##0,,"M"` |
+| Non-catalogue spend | `=SUMIFS(AllSpend[sum(PO Spend)],AllSpend[Buying Channel],"Non-catalogue")+SUMIFS(AllSpend[sum(PO Spend)],AllSpend[Buying Channel],"Unclassified")` | `"€"#,##0,,"M"` |
+| P-card spend | `=SUMIFS(AllSpend[sum(PO Spend)],AllSpend[Channel Group],"P-card")` | `"€"#,##0,"K"` |
+| Card spend non-compliant | `=SUMIFS(AllSpend[sum(PO Spend)],AllSpend[P-card Compliance],"Non-compliant")/SUMIFS(AllSpend[sum(PO Spend)],AllSpend[Source System],"P-card statement")` | `0%` |
+| Low-value POs to move to card | `=SUM(qOpportunities[P-card Candidate Lines])` | `#,##0` |
 | Off-catalogue share | `=NonCat / Total` | `0.0%` |
 | Opportunity coverage | `=SUMIFS(qOpportunities[Non-catalogue Spend],qOpportunities[In Scope],"Yes")/SUM(qOpportunities[Non-catalogue Spend])` | `0%` |
 | Candidates identified | `=COUNTIFS(qOpportunities[In Scope],"Yes")` | `0` |
@@ -46,6 +49,18 @@ Same as A, with `Buying Channel` in Filters (Non-catalogue and Unclassified tick
 
 On the Opportunities sheet, select `Commodity`, `Non-catalogue Spend` and `Cumulative Share` for the top 20 rows, then **Insert → Combo**: spend as clustered column, cumulative share as a line on the secondary axis.
 
+## Pivot F: P-card compliance
+
+- Filters: `Source System` = P-card statement.
+- Rows: `P-card Compliance`, then `P-card Flags`; Values: `sum(PO Spend)` and Count of `[REQ] Requisition ID`.
+- Add `Cardholder` to Rows for the follow-up list; sort descending.
+
+## Pivot G: card use against category policy
+
+- Filters: `Channel Group` = P-card.
+- Rows: `P-card Policy`, then `Taxonomy.Level 3 (Commodity) - Long`; Columns: `Buying Channel`; Values: `sum(PO Spend)`.
+- Blocked rows are the "stop card use" list; Allowed rows show where the card is working as intended.
+
 ## Slicers
 
-Insert slicers for `Country` and `Month`, then use **Report Connections** to link them to every pivot. KPI formulas and the Pareto chart show the full period.
+Insert slicers for `Country`, `Month` and `Source System`, then use **Report Connections** to link them to every pivot. KPI formulas and the Pareto chart show the full period.

@@ -2,6 +2,8 @@
 // Builds one row per requisition line, enriched with taxonomy, buying channel,
 // approver classification, country and month. Load this query to a sheet as table "Output".
 // Inputs (connection-only queries): qSpend, qApproverRaw, qTaxonomy, qUserMaster, qProcurementGroup
+// P-card: lines whose payment method contains "card" become Buying Channel "P-card on PO".
+// Off-platform card transactions are added separately by qPCardOut and appended in qAllSpend.
 let
     // ===== Settings: change these to match your files =====
     CodeCol  = "Purchasing Commodity number",   // taxonomy commodity number column
@@ -9,6 +11,7 @@ let
     UMEmail  = "Business Email Address",        // user master: email column
     ReqId    = "[REQ] Requisition ID",
     ApprUser = "[APS]Approved by User (User)",
+    PayCol   = "[PO-P&I] Payment Method",       // optional: invoice / P-Card on the PO
 
     // ===== Helpers: remove extra spaces; lowercase for matching =====
     Clean = (x as any) as text =>
@@ -79,7 +82,9 @@ let
         "Level 0 (Group)", "Level 1 (Family)", "Level 2 (Category)",
         "Level 3 (Commodity) - Long", CodeCol,
         "Procurement Or Business Led", "Operating Model Types",
-        "Procurement Category Classification", "Execution Strategy"
+        "Procurement Category Classification", "Execution Strategy",
+        "P-card Policy",                        // optional taxonomy columns (see qTaxonomyPolicy.pq):
+        "Scope Tier", "Proposed Route"          // Allowed/Restricted/Blocked; A-E tier; category route
     },
     Aliases = Table.ExpandListColumn(Table.AddColumn(Taxonomy, "_Key", each List.Distinct({
         Key([#"Level 3 (Commodity) - Short"]), Key([#"Level 3 (Commodity) - Long"])})), "_Key"),
@@ -109,15 +114,24 @@ let
         if List.Contains({"", "null", "n/a", "-", "none"}, Key([#"[REQ]Contract (Contract)"]))
         then "No" else "Yes", type text),
 
-    // ===== One buying channel: Catalogue / Contract / Non-catalogue =====
-    Channel = Table.AddColumn(Contract, "Buying Channel", each
+    // ===== Payment method (optional column; missing column = Invoice) =====
+    HasPay = Table.HasColumns(Spend, PayCol),
+    Payment = Table.AddColumn(Contract, "Payment Method", each
+        if HasPay and Text.Contains(Key(Record.Field(_, PayCol)), "card")
+        then "P-card" else "Invoice", type text),
+
+    // ===== One buying channel: Catalogue / Contract / P-card on PO / Non-catalogue =====
+    // Catalogue and contract win over payment method: a card-paid catalogue order is still catalogue.
+    Channel = Table.AddColumn(Payment, "Buying Channel", each
         if [Catalogue Status] = "Catalogue" then "Catalogue"
         else if [Contract Linked] = "Yes" then "Contract"
+        else if [Payment Method] = "P-card" then "P-card on PO"
         else if [Catalogue Status] = "Non-catalogue" then "Non-catalogue"
         else "Unclassified", type text),
     ChannelGroup = Table.AddColumn(Channel, "Channel Group", each
-        if List.Contains({"Catalogue", "Contract"}, [Buying Channel])
-        then "Catalogue + Contract" else [Buying Channel], type text),
+        if List.Contains({"Catalogue", "Contract"}, [Buying Channel]) then "Catalogue + Contract"
+        else if [Buying Channel] = "P-card on PO" then "P-card"
+        else [Buying Channel], type text),
 
     // ===== Add approver details =====
     ApprCols = {"Approvers", "Approver Emails", "Procurement Approvers",
@@ -169,6 +183,7 @@ let
         in if code = "" then "Blank"
            else Record.FieldOrDefault(CountryMap, code, code & " (not mapped)"), type text),
 
-    Output = Table.RemoveColumns(WithCountry, {"_Key", "_M"})
+    WithSource = Table.AddColumn(WithCountry, "Source System", each "Ariba requisition", type text),
+    Output = Table.RemoveColumns(WithSource, {"_Key", "_M"})
 in
     Output

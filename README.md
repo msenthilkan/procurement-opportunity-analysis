@@ -1,6 +1,6 @@
 # Procurement Buying channel Algorithm 
 
-An Excel-only pipeline that turns raw e-procurement exports into a refreshable view of **how much spend goes through catalogues and contracts**, **who actually approves it**, and **which categories to move on-platform first**.
+An Excel-only pipeline that turns raw e-procurement exports and the P-card statement into a refreshable view of **how much spend goes through catalogues, contracts and P-cards**, **who actually approves it**, **whether card use follows policy**, and **which categories to move on-platform first**.
 
 Built to support an e-procurement adoption programme across several countries. Everything runs inside Excel with Power Query and pivot tables, so the data never leaves the workbook. Monthly refresh is one click.
 
@@ -13,6 +13,7 @@ Built to support an e-procurement adoption programme across several countries. E
 1. **How much spend is off-catalogue, by country and category?** Every non-catalogue line must be reported, so the category view has to reconcile to 100%.
 2. **Where should catalogues and contracts be built?** The goal is a prioritised list of candidates covering a target share (75%) of non-catalogue spend.
 3. **Is procurement involved where the taxonomy says it should be?** This compares the category's intended lead (procurement- or business-led) with who actually approved each requisition.
+4. **Is the P-card used for the right things?** Card spend is categorised by merchant category code (MCC), checked against each category's P-card policy, and low-value one-off POs that belong on a card are identified.
 
 ## How it works
 
@@ -22,10 +23,15 @@ flowchart LR
     B[Approver export<br/>line x approver] --> S[Approver summary<br/>one row per requisition]
     U[User master<br/>name to email] --> S
     P[Procurement group<br/>emails] --> S
-    T[Category taxonomy<br/>L0 to L3] --> O
-    S --> O[Output<br/>enriched spend lines]
-    O --> Q[qOpportunities<br/>Pareto ranking]
-    O --> V[Pivots, slicers, KPIs]
+    T[Category taxonomy<br/>L0 to L3 + P-card policy] --> O
+    S --> O[Output<br/>enriched requisition lines]
+    C[P-card statement] --> PC[qPCardOut<br/>MCC mapping + compliance flags]
+    M[MCC map] --> PC
+    O --> PC
+    O --> AS[qAllSpend<br/>requisitions + card]
+    PC --> AS
+    AS --> Q[qOpportunities<br/>Pareto ranking]
+    AS --> V[Pivots, slicers, KPIs]
     Q --> V
 ```
 
@@ -46,6 +52,9 @@ flowchart LR
 - **Contract with top supplier** if one supplier holds at least 60% of the spend.
 - **Contract, consolidate suppliers** if five or more suppliers are used.
 - Otherwise **Contract**.
+- **P-card (tail spend)** if the category's P-card policy is Allowed, at least half the lines are already on card or are non-catalogue POs of 500 or less, and the average line is small. If the average line is large, the route becomes **<contract route> + P-card for tail**.
+- Card spend outside the taxonomy in a blocked MCC (cash, gambling, bars) is routed to **Prohibited: follow up with cardholder**.
+- **P-card Action** tells you what to do with card use per commodity: keep on card and move low-value POs to card, review it, or stop it.
 - **Priority:** High until 50% cumulative share, Medium until the target, Low after that.
 
 All thresholds are settings at the top of the query.
@@ -54,20 +63,44 @@ All thresholds are settings at the top of the query.
 
 ![Non-catalogue by category](docs/images/noncat_by_category.png)
 
+## P-card simulation (optional module)
+
+P-card is optional. Without a card programme the pipeline runs on Ariba requisitions alone: `qAllSpend` uses Output only, and `qOpportunities` drops all P-card logic and columns automatically when there are no card lines. To use it, load the card statement through `qPCardOut` and change one line in `qAllSpend.pq` (see the comment at the top). The Python preview always runs the full simulation.
+
+The sample data includes a synthetic card statement with built-in policy breaches, so every check can be tested.
+
+[![P-card compliance](https://github.com/msenthilkan/procurement-opportunity-analysis/raw/main/docs/images/pcard_compliance.png)](/msenthilkan/procurement-opportunity-analysis/blob/main/docs/images/pcard_compliance.png)
+
+| What was simulated | How |
+| --- | --- |
+| Off-platform card buys | 1,100 transactions across 30 MCCs, weighted to low-value tail spend |
+| Card-paid Ariba POs | About 30% of low-value non-catalogue POs in non-blocked categories are paid by card; each also appears on the statement with its PO number |
+| Split purchases | 20 cases of 2-3 transactions, same cardholder, merchant and day, each under the limit and together above it |
+| Over-limit buys | About 3% of transactions above the 2,500 single limit |
+| Leakage | About 8% of card buys made with a supplier that already has a catalogue or contract |
+| Prohibited MCCs | Cash withdrawals, bars and gambling |
+| Low-value PO tail | 410 one-off requisitions under 500 (courier, training, venues, research, print) |
+
+Result tables are in [docs/simulation/](docs/simulation/): `opportunities.csv`, `pcard_compliance_summary.csv`, `pcard_top50_noncompliant.csv` and `spend_by_country_channel.csv`. Rerun with the two scripts below; the numbers will match exactly because the generator is seeded.
+
 ## Repository layout
 
 ```
 powerquery/
-  Output.pq              main transformation (paste into Advanced Editor)
-  qOpportunities.pq      Pareto ranking and suggested route
-sample-data/             synthetic input files with the real export layouts
+  Output.pq              main transformation of requisition lines (paste into Advanced Editor)
+  qPCardOut.pq           card statement -> spend lines, MCC mapping, compliance flags
+  qAllSpend.pq           appends requisitions and card lines into one table
+  qTaxonomyPolicy.pq     optional: adds scope tier, category route and P-card policy from a scope matrix
+  qOpportunities.pq      Pareto ranking, suggested route and P-card action
+sample-data/             synthetic input files with the real export layouts (incl. qPCard, qMCCMap)
 scripts/
-  generate_sample_data.py   recreates the sample files
-  preview_dashboard.py      re-implements the logic in pandas to cross-check and draw the charts above
+  generate_sample_data.py   recreates the sample files, including the P-card simulation
+  preview_dashboard.py      re-implements the logic in pandas to cross-check, draw charts and write docs/simulation/
 docs/
   setup-guide.md         step-by-step build in Excel
   dashboard-pivots.md    pivot recipes for the leadership slides
   design-notes.md        design decisions and problems solved
+  simulation/            result tables from the P-card simulation
 ```
 
 ## Try it
