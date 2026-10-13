@@ -1,1 +1,27 @@
+# Runs the synthetic-data pipeline and the 60 scenario checks on every push and pull request.
+# The badge at the top of the README shows the latest result.
+name: Scenario checks
 
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Generate synthetic sample data
+        run: python scripts/generate_sample_data.py
+      - name: Run Power Query mirrors
+        run: |
+          python scripts/preview_dashboard.py
+          python scripts/preview_country_actions.py
+      - name: Check all scenarios
+        run: python scripts/check_scenarios.py 
