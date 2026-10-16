@@ -1,0 +1,578 @@
+From 5f7ae1903b9e75ab7737f435921a7728426a557e Mon Sep 17 00:00:00 2001
+From: Playbook update <you@example.com>
+Date: Fri, 16 Oct 2026 06:40:59 +0000
+Subject: [PATCH] Add buying-channel governance playbook with storyline and
+ flowcharts
+
+- Move playbook to docs/ and rewrite around the Find, Decide, Enable, Govern storyline
+- Add Mermaid flowcharts for each move and questions for discussion
+- Link the playbook from the README
+- Remove stray root copies of the playbook and patch
+---
+ README.md                         |   2 +
+ buying-channel-governance.md      | 125 ---------------
+ buying_channel_governance.patch   | 143 -----------------
+ docs/buying-channel-governance.md | 256 ++++++++++++++++++++++++++++++
+ 4 files changed, 258 insertions(+), 268 deletions(-)
+ delete mode 100644 buying-channel-governance.md
+ delete mode 100644 buying_channel_governance.patch
+ create mode 100644 docs/buying-channel-governance.md
+
+diff --git a/README.md b/README.md
+index 5bef12f..2e264a0 100644
+--- a/README.md
++++ b/README.md
+@@ -48,6 +48,8 @@ Built to support an e-procurement adoption programme across several countries. E
+ 
+ ## The business questions
+ 
++**[Buying-channel governance playbook](docs/buying-channel-governance.md)** — the programme story in one page, with flowcharts for opportunity qualification, route selection, the requester journey, catalogue bypass control and monthly governance. Includes [questions for discussion](docs/buying-channel-governance.md#9-questions-for-discussion).
++
+ 1. **How much spend is off-catalogue, by country and category?** Every non-catalogue line must be reported, so the category view has to reconcile to 100%.
+ 2. **Where should catalogues and contracts be built?** The goal is a prioritised list of candidates covering a target share (75%) of non-catalogue spend.
+ 3. **Is procurement involved where the taxonomy says it should be?** This compares the category's intended lead (procurement- or business-led) with who actually approved each requisition.
+diff --git a/buying-channel-governance.md b/buying-channel-governance.md
+deleted file mode 100644
+index 0b8b6b0..0000000
+--- a/buying-channel-governance.md
++++ /dev/null
+@@ -1,125 +0,0 @@
+-# Buying-channel opportunity and governance playbook
+-
+-This playbook describes a reusable way to move from spend and sourcing signals to an approved buying channel, then govern adoption. It is platform-neutral; validate configuration and integration options in the target Ariba tenant before implementation.
+-
+-All examples and measures in this guide are generic. The companion analytics repository uses synthetic data.
+-
+-## 1. End-to-end opportunity map
+-
+-```mermaid
+-flowchart TB
+-    A[Organic: planned or awarded RFP pipeline] --> Q[Qualify opportunity]
+-    B[Non-organic: PO spend, free text and failed searches] --> Q
+-    Q --> D{Route decision}
+-    D --> C[Catalogue or punchout]
+-    D --> K[Contract or SOW]
+-    D --> E[Quote, exception or another channel]
+-    C --> I[Implement supplier and content]
+-    K --> I
+-    E --> G[Monthly governance]
+-    I --> G
+-    G --> M[Measure adoption and spend coverage]
+-```
+-
+-**Organic** means an opportunity surfaced through a planned/active sourcing event, award or renewal. **Non-organic** means demand discovered from completed purchasing: recurring PO spend, free-text requests, failed searches, catalogue bypasses or fragmented supplier buying. These are opportunity sources; they do not, by themselves, determine the right route.
+-
+-## 2. Qualify before recommending a channel
+-
+-| Check | Evidence to capture | Decision it informs |
+-| --- | --- | --- |
+-| Scope and spend | Country, purchasing entity, commodity/L3, supplier, period, PO spend and currency | Is the demand in scope, material and comparable? |
+-| Existing content | Supplier ID, active catalogue/punchout, contract, price validity, currency, UOM, ship-to/region and entity coverage | Can users already buy correctly through Ariba? |
+-| Demand pattern | Line count, repeat frequency, standard specification, order value and tail of one-off demand | Can reusable catalogue content serve the need? |
+-| Commercial fit | Supplier concentration, contract terms, sourcing pipeline, preferred-supplier status and local restrictions | Should the route be catalogue, contract/SOW, sourcing or another channel? |
+-| Readiness and ownership | Category manager, local buyer, requester/process owner, supplier and catalogue operations contact | Who can validate and deliver the action? |
+-
+-Use supplier ID and commodity code as stable match keys where available. Treat supplier name, description similarity and translated text as supporting evidence; they are not sufficient alone to claim that an active catalogue covers the requested item and location.
+-
+-### Route logic
+-
+-| Recommended route | Use when | Typical next action |
+-| --- | --- | --- |
+-| Extend or use existing catalogue | Correct supplier, commodity, entity/region, item, price and UOM are active | Fix discoverability, access or requester guidance; test the buying path |
+-| New catalogue or punchout | Repeatable demand with stable items/services, specifications and pricing | Confirm supplier readiness, content format, owner, refresh and support model |
+-| Contract or SOW | Commercial terms or negotiated service scope matter more than line-level catalogue content | Confirm agreement coverage, buying channel, statement-of-work controls and renewal owner |
+-| Quote / spot buy / free text | Variable, urgent, one-off or not yet standardized demand | Record the reason, apply delegated controls, and review recurrence |
+-| Other channel / out of scope | Policy or business design points to another channel or the category is not addressable | Confirm the rationale with the category/business owner and document the denominator treatment |
+-
+-Avoid automatically converting all non-catalogue spend to catalogues. In media, professional services and project work, a contract/SOW or controlled sourcing route may be more suitable.
+-
+-## 3. Requester journey: catalogue availability and bypass control
+-
+-When a requester submits a non-catalogue requisition, check for an **active, applicable** catalogue match using supplier, commodity, entity/region and effective dates. If a match exists, show a soft warning with the catalogue link and let the requester review it. If the requester continues, capture a reason and send the case to the content operations queue.
+-
+-Suggested reasons:
+-
+-- Catalogue price is higher than an evidenced quote (attach the quote or reference).
+-- Required item, specification or service is unavailable.
+-- Delivery, location, entity or timing does not meet the need.
+-- Urgent or approved exception (provide the approval/reference).
+-- Other (explanation required).
+-
+-```mermaid
+-flowchart TB
+-    A[Requester starts non-catalogue PR] --> B{Applicable active catalogue match?}
+-    B -->|No| C[Continue normal approval route]
+-    B -->|Yes| D[Show soft warning and catalogue link]
+-    D --> E{Requester uses catalogue?}
+-    E -->|Yes| F[Submit through catalogue]
+-    E -->|No| G[Capture reason and evidence]
+-    G --> H[Catalogue Operations triage]
+-    H --> I[Correct content, supplier action or approved exception]
+-```
+-
+-Catalogue Operations should validate the reason and evidence, record an owner and due date, and route recurring issues to the category manager. Actions may include correcting price/UOM/search terms, expanding regional coverage, helping the supplier improve content, or confirming that the request is a valid exception. Repeated supplier-controlled gaps should feed a supplier improvement plan and preferred-supplier/catalogue onboarding discussion.
+-
+-**Ariba fit-gap:** treat the warning, reason field, required-field behavior, matching source, and event timing as design requirements. Confirm what the tenant supports through standard configuration, guided buying policies, forms or an approved extension. Do not assume a mandatory dropdown or supplier × commodity × region lookup is available without tenant validation and testing.
+-
+-## 4. Preferred-supplier catalogue onboarding
+-
+-Use the preferred-supplier list as a coverage input, not as proof that catalogue content exists. Compare preferred suppliers with active content by commodity/L3, country/entity and channel. For each gap:
+-
+-1. Category manager confirms strategic fit, supplier priority and intended route.
+-2. Local buyer validates country/entity needs, tax, currency, delivery and any local controls.
+-3. Catalogue Operations confirms the technical content model, data owner, approval and refresh process.
+-4. Supplier provides validated product/service data, pricing, UOM, availability and required identifiers.
+-5. Test search terms, content, price, ordering, approval and downstream PO/invoice behavior in the right environment.
+-6. Publish only after business and technical sign-off; monitor first transactions, errors and user feedback.
+-
+-Track supplier onboarding as an action with named owner, due date, status, blocker and evidence. If the preferred supplier cannot support a catalogue, document the alternative route and escalation decision.
+-
+-## 5. Monthly governance journey
+-
+-| Participant | Monthly responsibility |
+-| --- | --- |
+-| Procurement analytics / operations | Refresh extracts, reconcile totals and currency, identify exceptions, prepare ranked opportunities and action register |
+-| Global or regional category manager | Validate category strategy, route, supplier leverage, cross-country replication and supplier actions |
+-| Country/local buyer | Confirm local entity, tax, delivery, language, policy and supplier readiness; own local implementation actions |
+-| Catalogue / contract operations | Validate current content, resolve bypass cases, publish approved updates and report operational defects |
+-| Ariba product owner / IT | Confirm tenant feasibility, integrations, controls, security, test approach and release/change management |
+-| Business/requester representative | Validate specifications, usability, demand and reason codes from actual requesters |
+-
+-Recommended monthly cycle: **refresh and reconcile → review top opportunities and bypasses → agree route and owners → track delivery and blockers → check adoption and benefits at the next review.** Use an action register keyed at least by period, country/entity, commodity/L3, supplier and opportunity ID. Keep evidence, decision, owner, due date, status and next review date.
+-
+-## 6. Measures: keep opportunity and realized adoption separate
+-
+-Set the period, in-scope countries, currency conversion source/date and spend basis before comparing results. If PO spend is the agreed basis, use it consistently for both numerator and denominator. Reconcile totals to the source extract.
+-
+-| Measure | Suggested calculation | What it tells you |
+-| --- | --- | --- |
+-| Spend analysis coverage | Off-catalogue spend reviewed ÷ total off-catalogue spend in scope | Whether the opportunity population has been assessed |
+-| Candidate opportunity coverage | Addressable off-catalogue spend with a validated catalogue/contract route ÷ total addressable off-catalogue spend | Whether the opportunity plan reaches the agreed target (for example, 75%) |
+-| Realized catalogue/contract adoption | Spend transacted through approved catalogue or contract routes ÷ addressable spend | Whether implemented changes are changing buying behavior |
+-| Bypass rate | Non-catalogue spend/requests with an applicable catalogue match ÷ total requests/spend with a match | Where content, price, search or user experience needs attention |
+-| Content availability | Preferred-supplier × commodity × entity/region combinations with active usable content ÷ combinations in scope | Progress on onboarding and regional coverage |
+-| Closure performance | Actions closed by due date ÷ actions due | Whether governance decisions lead to delivery |
+-
+-Keep excluded or business-led spend visible with a reason. Never count a proposed route as realized savings or adoption until transactions confirm the channel is being used.
+-
+-## 7. Multi-language descriptions
+-
+-Preserve the original requester description. Add normalized text or a reviewed translation as a separate field; never overwrite the source. Use stable IDs (supplier, commodity, entity, item and contract) first, taxonomy definitions and approved multilingual synonyms second, and translated description similarity as a candidate-matching aid only. Flag low-confidence matches for category/local-buyer review. Retain the original text and reviewer decision so the classification can be audited.
+-
+-## 8. Interview summary
+-
+-“I separate opportunity discovery from route selection. I combine the sourcing pipeline with completed PO-spend and search-gap analysis, verify existing supplier and regional content, then recommend catalogue, contract/SOW, sourcing or a controlled exception based on demand and commercial fit. At requisition time, an applicable catalogue match should prompt the requester to use it or record an evidence-backed reason. Catalogue Operations triages the reason, while category managers and local buyers review supplier coverage, onboarding, adoption and exceptions monthly. I track candidate coverage separately from actual channel adoption.”
+diff --git a/buying_channel_governance.patch b/buying_channel_governance.patch
+deleted file mode 100644
+index dd46a22..0000000
+--- a/buying_channel_governance.patch
++++ /dev/null
+@@ -1,143 +0,0 @@
+-diff --git a/README.md b/README.md
+-index 5bef12f..0000000 100644
+---- a/README.md
+-+++ b/README.md
+-@@ -47,6 +47,8 @@
+- | What are the top opportunities? | [Top 10 with route](docs/pivots.md#8-top-10-opportunities-and-their-route) |
+- 
+- ## The business questions
+-+
+-+**[Buying-channel governance playbook](docs/buying-channel-governance.md)** — opportunity qualification, route selection, catalogue bypass controls, supplier onboarding and monthly governance.
+- 
+- 1. **How much spend is off-catalogue, by country and category?** Every non-catalogue line must be reported, so the category view has to reconcile to 100%.
+- 2. **Where should catalogues and contracts be built?** The goal is a prioritised list of candidates covering a target share (75%) of non-catalogue spend.
+-diff --git a/docs/buying-channel-governance.md b/docs/buying-channel-governance.md
+-new file mode 100644
+---- /dev/null
+-+++ b/docs/buying-channel-governance.md
+-@@ -0,0 +1,125 @@
+-+# Buying-channel opportunity and governance playbook
+-+
+-+This playbook describes a reusable way to move from spend and sourcing signals to an approved buying channel, then govern adoption. It is platform-neutral; validate configuration and integration options in the target Ariba tenant before implementation.
+-+
+-+All examples and measures in this guide are generic. The companion analytics repository uses synthetic data.
+-+
+-+## 1. End-to-end opportunity map
+-+
+-+```mermaid
+-+flowchart TB
+-+    A[Organic: planned or awarded RFP pipeline] --> Q[Qualify opportunity]
+-+    B[Non-organic: PO spend, free text and failed searches] --> Q
+-+    Q --> D{Route decision}
+-+    D --> C[Catalogue or punchout]
+-+    D --> K[Contract or SOW]
+-+    D --> E[Quote, exception or another channel]
+-+    C --> I[Implement supplier and content]
+-+    K --> I
+-+    E --> G[Monthly governance]
+-+    I --> G
+-+    G --> M[Measure adoption and spend coverage]
+-+```
+-+
+-+**Organic** means an opportunity surfaced through a planned/active sourcing event, award or renewal. **Non-organic** means demand discovered from completed purchasing: recurring PO spend, free-text requests, failed searches, catalogue bypasses or fragmented supplier buying. These are opportunity sources; they do not, by themselves, determine the right route.
+-+
+-+## 2. Qualify before recommending a channel
+-+
+-+| Check | Evidence to capture | Decision it informs |
+-+| --- | --- | --- |
+-+| Scope and spend | Country, purchasing entity, commodity/L3, supplier, period, PO spend and currency | Is the demand in scope, material and comparable? |
+-+| Existing content | Supplier ID, active catalogue/punchout, contract, price validity, currency, UOM, ship-to/region and entity coverage | Can users already buy correctly through Ariba? |
+-+| Demand pattern | Line count, repeat frequency, standard specification, order value and tail of one-off demand | Can reusable catalogue content serve the need? |
+-+| Commercial fit | Supplier concentration, contract terms, sourcing pipeline, preferred-supplier status and local restrictions | Should the route be catalogue, contract/SOW, sourcing or another channel? |
+-+| Readiness and ownership | Category manager, local buyer, requester/process owner, supplier and catalogue operations contact | Who can validate and deliver the action? |
+-+
+-+Use supplier ID and commodity code as stable match keys where available. Treat supplier name, description similarity and translated text as supporting evidence; they are not sufficient alone to claim that an active catalogue covers the requested item and location.
+-+
+-+### Route logic
+-+
+-+| Recommended route | Use when | Typical next action |
+-+| --- | --- | --- |
+-+| Extend or use existing catalogue | Correct supplier, commodity, entity/region, item, price and UOM are active | Fix discoverability, access or requester guidance; test the buying path |
+-+| New catalogue or punchout | Repeatable demand with stable items/services, specifications and pricing | Confirm supplier readiness, content format, owner, refresh and support model |
+-+| Contract or SOW | Commercial terms or negotiated service scope matter more than line-level catalogue content | Confirm agreement coverage, buying channel, statement-of-work controls and renewal owner |
+-+| Quote / spot buy / free text | Variable, urgent, one-off or not yet standardized demand | Record the reason, apply delegated controls, and review recurrence |
+-+| Other channel / out of scope | Policy or business design points to another channel or the category is not addressable | Confirm the rationale with the category/business owner and document the denominator treatment |
+-+
+-+Avoid automatically converting all non-catalogue spend to catalogues. In media, professional services and project work, a contract/SOW or controlled sourcing route may be more suitable.
+-+
+-+## 3. Requester journey: catalogue availability and bypass control
+-+
+-+When a requester submits a non-catalogue requisition, check for an **active, applicable** catalogue match using supplier, commodity, entity/region and effective dates. If a match exists, show a soft warning with the catalogue link and let the requester review it. If the requester continues, capture a reason and send the case to the content operations queue.
+-+
+-+Suggested reasons:
+-+
+-+- Catalogue price is higher than an evidenced quote (attach the quote or reference).
+-+- Required item, specification or service is unavailable.
+-+- Delivery, location, entity or timing does not meet the need.
+-+- Urgent or approved exception (provide the approval/reference).
+-+- Other (explanation required).
+-+
+-+```mermaid
+-+flowchart TB
+-+    A[Requester starts non-catalogue PR] --> B{Applicable active catalogue match?}
+-+    B -->|No| C[Continue normal approval route]
+-+    B -->|Yes| D[Show soft warning and catalogue link]
+-+    D --> E{Requester uses catalogue?}
+-+    E -->|Yes| F[Submit through catalogue]
+-+    E -->|No| G[Capture reason and evidence]
+-+    G --> H[Catalogue Operations triage]
+-+    H --> I[Correct content, supplier action or approved exception]
+-+```
+-+
+-+Catalogue Operations should validate the reason and evidence, record an owner and due date, and route recurring issues to the category manager. Actions may include correcting price/UOM/search terms, expanding regional coverage, helping the supplier improve content, or confirming that the request is a valid exception. Repeated supplier-controlled gaps should feed a supplier improvement plan and preferred-supplier/catalogue onboarding discussion.
+-+
+-+**Ariba fit-gap:** treat the warning, reason field, required-field behavior, matching source, and event timing as design requirements. Confirm what the tenant supports through standard configuration, guided buying policies, forms or an approved extension. Do not assume a mandatory dropdown or supplier × commodity × region lookup is available without tenant validation and testing.
+-+
+-+## 4. Preferred-supplier catalogue onboarding
+-+
+-+Use the preferred-supplier list as a coverage input, not as proof that catalogue content exists. Compare preferred suppliers with active content by commodity/L3, country/entity and channel. For each gap:
+-+
+-+1. Category manager confirms strategic fit, supplier priority and intended route.
+-+2. Local buyer validates country/entity needs, tax, currency, delivery and any local controls.
+-+3. Catalogue Operations confirms the technical content model, data owner, approval and refresh process.
+-+4. Supplier provides validated product/service data, pricing, UOM, availability and required identifiers.
+-+5. Test search terms, content, price, ordering, approval and downstream PO/invoice behavior in the right environment.
+-+6. Publish only after business and technical sign-off; monitor first transactions, errors and user feedback.
+-+
+-+Track supplier onboarding as an action with named owner, due date, status, blocker and evidence. If the preferred supplier cannot support a catalogue, document the alternative route and escalation decision.
+-+
+-+## 5. Monthly governance journey
+-+
+-+| Participant | Monthly responsibility |
+-+| --- | --- |
+-+| Procurement analytics / operations | Refresh extracts, reconcile totals and currency, identify exceptions, prepare ranked opportunities and action register |
+-+| Global or regional category manager | Validate category strategy, route, supplier leverage, cross-country replication and supplier actions |
+-+| Country/local buyer | Confirm local entity, tax, delivery, language, policy and supplier readiness; own local implementation actions |
+-+| Catalogue / contract operations | Validate current content, resolve bypass cases, publish approved updates and report operational defects |
+-+| Ariba product owner / IT | Confirm tenant feasibility, integrations, controls, security, test approach and release/change management |
+-+| Business/requester representative | Validate specifications, usability, demand and reason codes from actual requesters |
+-+
+-+Recommended monthly cycle: **refresh and reconcile → review top opportunities and bypasses → agree route and owners → track delivery and blockers → check adoption and benefits at the next review.** Use an action register keyed at least by period, country/entity, commodity/L3, supplier and opportunity ID. Keep evidence, decision, owner, due date, status and next review date.
+-+
+-+## 6. Measures: keep opportunity and realized adoption separate
+-+
+-+Set the period, in-scope countries, currency conversion source/date and spend basis before comparing results. If PO spend is the agreed basis, use it consistently for both numerator and denominator. Reconcile totals to the source extract.
+-+
+-+| Measure | Suggested calculation | What it tells you |
+-+| --- | --- | --- |
+-+| Spend analysis coverage | Off-catalogue spend reviewed ÷ total off-catalogue spend in scope | Whether the opportunity population has been assessed |
+-+| Candidate opportunity coverage | Addressable off-catalogue spend with a validated catalogue/contract route ÷ total addressable off-catalogue spend | Whether the opportunity plan reaches the agreed target (for example, 75%) |
+-+| Realized catalogue/contract adoption | Spend transacted through approved catalogue or contract routes ÷ addressable spend | Whether implemented changes are changing buying behavior |
+-+| Bypass rate | Non-catalogue spend/requests with an applicable catalogue match ÷ total requests/spend with a match | Where content, price, search or user experience needs attention |
+-+| Content availability | Preferred-supplier × commodity × entity/region combinations with active usable content ÷ combinations in scope | Progress on onboarding and regional coverage |
+-+| Closure performance | Actions closed by due date ÷ actions due | Whether governance decisions lead to delivery |
+-+
+-+Keep excluded or business-led spend visible with a reason. Never count a proposed route as realized savings or adoption until transactions confirm the channel is being used.
+-+
+-+## 7. Multi-language descriptions
+-+
+-+Preserve the original requester description. Add normalized text or a reviewed translation as a separate field; never overwrite the source. Use stable IDs (supplier, commodity, entity, item and contract) first, taxonomy definitions and approved multilingual synonyms second, and translated description similarity as a candidate-matching aid only. Flag low-confidence matches for category/local-buyer review. Retain the original text and reviewer decision so the classification can be audited.
+-+
+-+## 8. Interview summary
+-+
+-+“I separate opportunity discovery from route selection. I combine the sourcing pipeline with completed PO-spend and search-gap analysis, verify existing supplier and regional content, then recommend catalogue, contract/SOW, sourcing or a controlled exception based on demand and commercial fit. At requisition time, an applicable catalogue match should prompt the requester to use it or record an evidence-backed reason. Catalogue Operations triages the reason, while category managers and local buyers review supplier coverage, onboarding, adoption and exceptions monthly. I track candidate coverage separately from actual channel adoption.”
+diff --git a/docs/buying-channel-governance.md b/docs/buying-channel-governance.md
+new file mode 100644
+index 0000000..2d4809b
+--- /dev/null
++++ b/docs/buying-channel-governance.md
+@@ -0,0 +1,256 @@
++# Buying-channel governance playbook
++
++**From off-catalogue spend to governed buying channels: find it, route it, make it easy, prove it.**
++
++This page is the discussion version of the programme storyline. Each section starts with its key message, followed by the flow behind it. Comments and challenges are welcome: open an issue or a discussion and reference the section number.
++
++> All examples are generic. The companion analytics in this repository use **synthetic data**. Validate every Ariba configuration point in the target tenant before implementation.
++
++---
++
++## The story in one page
++
++| | Message | What it means |
++| --- | --- | --- |
++| **Situation** | The money is mapped. Buying behaviour hasn't moved. | Most PO spend still goes through non-catalogue channels, even though the opportunities are already ranked. |
++| **Complication** | The coverage target looks met on paper. It isn't proven. | Out-of-scope categories and different spend denominators change the answer. |
++| **Resolution** | Find. Decide. Enable. Govern. | One path from every opportunity to proven adoption. |
++| **Ask** | Four decisions unlock the next 90 days. | Spend basis, exclusions, governance owner and Ariba fit-gap. See [Questions for discussion](#9-questions-for-discussion). |
++
++---
++
++## 1. One path from every opportunity to adoption
++
++**Two sources in. Three checks. One recorded route. Governed until it's used.**
++
++```mermaid
++flowchart TB
++    subgraph FIND["1 FIND"]
++        A["Pipeline / RFP<br/>organic"]
++        B["PO spend + search gaps<br/>non-organic"]
++    end
++    subgraph DECIDE["2 DECIDE"]
++        Q1["Scope the data"] --> Q2["Check Ariba"] --> Q3["Test and rank"]
++    end
++    A --> Q1
++    B --> Q1
++    Q3 --> R{"Route"}
++    R --> C["Catalogue"]
++    R --> K["Contract / SOW"]
++    R --> X["Quote / exception"]
++    R --> E["Escalate"]
++    subgraph ADOPT["3 ENABLE + 4 GOVERN"]
++        I["Implement"] --> G["Govern monthly"] --> M["Measure adoption"]
++    end
++    C --> I
++    K --> I
++    X --> G
++    E --> G
++
++    classDef teal fill:#087E82,color:#fff,stroke:#087E82
++    classDef navy fill:#16324F,color:#fff,stroke:#16324F
++    classDef grey fill:#687783,color:#fff,stroke:#687783
++    classDef red fill:#B23A48,color:#fff,stroke:#B23A48
++    classDef amber fill:#D9822B,color:#fff,stroke:#D9822B
++    class C teal
++    class K navy
++    class X grey
++    class E red
++    class M amber
++```
++
++**Rule:** no opportunity leaves this path without a route, an owner and a due date.
++
++---
++
++## 2. Move 1 · Find: Two sources. One register.
++
++**Catch demand at the RFP, or find it in what we already buy.**
++
++| | Pipeline-led (organic) | Spend-led (non-organic) |
++| --- | --- | --- |
++| **Trigger** | An RFP or tender is planned, active or moving to award | Recurring, concentrated or fragmented non-catalogue demand outside an active RFP |
++| **Play** | Split repeatable lines from bespoke scope **before award** | Group by country, company, L3 and supplier; confirm with procurement |
++| **Example** | A facility-management tender moving to award | Displays: catalogue repeat specs, quote bespoke work |
++
++**One register, one opportunity:** deduplicate by country, company, L3, supplier and period. Keep the source ID.
++
++---
++
++## 3. Move 2 · Decide: Every opportunity gets one route, chosen from evidence
++
++### Qualify before you route
++
++```mermaid
++flowchart LR
++    S["1 Find a signal<br/>RFP, PO spend, failed search"] --> D["2 Scope the data<br/>Deduplicate; confirm taxonomy<br/>and PO-spend basis"]
++    D --> A["3 Check Ariba<br/>Active supplier? Catalogue or punchout?<br/>Valid contract and coverage?"]
++    A --> T["4 Test and rank<br/>Repeat demand, stable specs,<br/>ready supplier; rank by eligible spend"]
++    T --> REG[("Opportunity register")]
++```
++
++Use **supplier ID and commodity code** as match keys. A supplier-name or description match alone does not prove an active catalogue covers the item and location.
++
++### Catalogue or contract? Fit the channel to the buy.
++
++| | Catalogue | Contract |
++| --- | --- | --- |
++| **What it is** | What the requester can search and select | What we negotiated: scope, rates, term |
++| **Needs / controls** | Description, supplier, unit, price, validity, company and country coverage | Covered entities, scope, rates, dates, terms and obligations |
++| **Best fit** | Repeatable specs, stable prices | Negotiated or bespoke services, SOWs |
++| **Example** | Standard display items; rate-card lines | Agency MSA with project SOWs |
++
++**Use both** when contract rates can become catalogue lines. **Watch out:** contract-linked spend can still be non-catalogue.
++
++### Route options
++
++| Route | Use when | Next action |
++| --- | --- | --- |
++| Catalogue | Repeatable item or service; coverage can be maintained | Build, test and publish content |
++| Contract / SOW | Negotiated rates or project-based services | Confirm agreement coverage and SOW controls |
++| Quote / exception | Variable demand or no reusable content | Record reason and evidence; review recurrence |
++| Escalate | Scope, taxonomy or policy question | Owner confirms before excluding or reclassifying |
++
++Don't force everything into catalogues. Media, professional services and project work often fit a contract/SOW better.
++
++---
++
++## 4. Move 3 · Enable
++
++### 4A. Make the right route the easy route
++
++**A failed search becomes a content fix, not a dead end.**
++
++```mermaid
++flowchart LR
++    N["1 Need"] --> S["2 Search<br/>Guided Buying"] --> R{"3 Select a route"}
++    R -->|Catalogue match| AP["4 Approve"]
++    R -->|Contract-based| AP
++    R -->|No match| FT["Free text<br/>+ gap reason"]
++    FT --> AP
++    AP --> F["5 Fulfil<br/>PO, receipt, invoice"]
++
++    FT -.-> LB
++    subgraph LOOP["Content loop"]
++        LB["Local buyer<br/>local fit, coverage"] --> CM["Category manager<br/>catalogue, contract or quote"] --> P["Publish<br/>load, test, notify"]
++    end
++    P -.->|Next search succeeds| S
++```
++
++**Success =** supplier, scope, price and entity/country coverage are all valid.
++
++### 4B. Every bypass becomes a fix, not a leak
++
++**A soft warning, not a block: exceptions stay possible, but each one is explained.**
++
++```mermaid
++flowchart TB
++    A["Requester starts non-catalogue PR"] --> B{"Active, applicable<br/>catalogue match?"}
++    B -->|No| C["Normal approval route"]
++    B -->|Yes| D["Soft warning<br/>+ catalogue link"]
++    D --> E{"Uses catalogue?"}
++    E -->|Yes| F["Submit through catalogue"]
++    E -->|No| G["Capture reason + evidence"]
++    G --> H["Catalogue Ops triage"]
++    H --> I["Fix price, content or search"]
++    H --> J["Confirm one-time exception"]
++    H --> K["Repeat supplier gap<br/>to category manager"]
++```
++
++| Requester reasons | Catalogue Ops action |
++| --- | --- |
++| Quote lower than catalogue (attach it) | Verify evidence; correct price |
++| Item or service missing | Add content or onboard supplier |
++| Delivery, entity or timing doesn't fit | Extend regional coverage |
++| Other (explanation required) | Confirm exception or fix the root cause |
++
++> **Ariba fit-gap:** guided buying justification is optional by default. Validate the mandatory reason, the supplier × commodity × region lookup, warning timing and data source with the Ariba product owner before build.
++
++### 4C. Build once. Test end to end. Publish and track.
++
++```mermaid
++flowchart LR
++    F["1 Find demand"] --> Q["2 Qualify fit"] --> G{"Route gate"}
++    G -->|Repeats and maintainable| S["3 Set content"]
++    G -->|Bespoke or variable| K["Contract / SOW or quote"]
++    S --> B["4 Build and test<br/>search, PR, approval, PO"] --> P["5 Publish and track"]
++```
++
++| Owner | Role |
++| --- | --- |
++| Category manager | Sets supplier and route |
++| Local buyer | Confirms country fit |
++| Content owner | Loads, tests, publishes |
++
++**Preferred suppliers first.** Compare preferred suppliers by L3 and region with active content. Every gap gets a sponsor, owner and due date. The preferred-supplier list is a coverage input, not proof that content exists.
++
++---
++
++## 5. Move 4 · Govern: One review. One register. Named owners.
++
++**Five steps every month turn evidence into decisions, owned changes and a measured result.**
++
++```mermaid
++flowchart LR
++    P["1 Prepare<br/>refresh evidence<br/>pre-read 5 days out"] --> V["2 Validate<br/>CM: strategy<br/>buyer: local fit"]
++    V --> D["3 Decide<br/>route, evidence,<br/>owner, due date"]
++    D --> L["4 Deliver<br/>build, test, publish,<br/>tell users"]
++    L --> R["5 Verify<br/>adoption and<br/>open actions"]
++    R -.->|next month| P
++```
++
++**Every opportunity leaves with one decision:** build catalogue · contract/SOW · keep quote route · escalate.
++
++| Standing role | Monthly responsibility |
++| --- | --- |
++| Global / regional category manager | Category strategy, supplier choice, catalogue vs contract |
++| Country buyer | Local demand, entity, language, tax and delivery |
++| Catalogue / contract owners | Maintain data, resolve bypass cases, publish |
++| Ariba product owner / IT | Tenant feasibility, controls, testing and release |
++| Business, Finance, Legal, Tax | Join when their decision is needed |
++
++**Action register fields:** country · company · L3 · supplier · spend and source · decision and evidence · owner · due date · status · adoption result.
++
++---
++
++## 6. Measure: on paper is not proven
++
++**A headline ratio is only as good as its denominator and scope.**
++
++Three gates before reporting a coverage target:
++
++1. **One denominator.** Same PO-spend basis, period, countries and currency for numerator and denominator.
++2. **Visible exclusions.** Rebates, agent commissions or leases may not be addressable. Keep them visible with a reason.
++3. **Reconciled to source.** The ranking base must tie back to total PO spend in the extract.
++
++| Measure | Calculation | Tells you |
++| --- | --- | --- |
++| Candidate coverage | Addressable spend with a validated route ÷ addressable spend | Is the plan big enough for the target? |
++| Realized adoption | Spend through catalogue or contract ÷ addressable spend | Is behaviour actually changing? |
++| Bypass rate | Matched requests that still went non-catalogue ÷ all matched | Where do content, price or search need work? |
++| Content availability | Preferred supplier × commodity × region with usable content ÷ in scope | Is onboarding closing gaps? |
++| Closure performance | Actions closed by due date ÷ actions due | Do decisions turn into delivery? |
++
++Never count a proposed route as adoption until transactions confirm it.
++
++---
++
++## 7. Multi-language descriptions
++
++Match on **stable IDs first**, taxonomy and approved synonyms second, translated similarity last (candidates only). Keep the original description, add the translation as a separate field, and log the reviewer's decision.
++
++---
++
++## 8. The story in 60 seconds
++
++> "We know where the off-catalogue money is, but coverage isn't proven until we agree one denominator and keep exclusions visible. Every opportunity follows one path: find it in the pipeline or the spend, qualify it, record one route, then make that route the easy choice for requesters. Bypasses become fixes, not leaks. One monthly review with named owners checks adoption from transactions, not plans."
++
++---
++
++## 9. Questions for discussion
++
++1. **Spend basis.** Which denominator do we report the coverage target against, and do excluded categories leave it?
++2. **Exclusions.** Who approves out-of-scope categories, or their reclassification?
++3. **Governance owner.** Who chairs the monthly review, and who must attend?
++4. **Ariba fit-gap.** Can the tenant enforce a required bypass reason and a supplier × commodity × region coverage lookup through standard configuration?
++5. **Success definition.** Do we agree a search counts as successful only when supplier, scope, price and entity/country coverage are all valid?
+-- 
+2.43.0
+
