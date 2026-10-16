@@ -48,6 +48,8 @@ Built to support an e-procurement adoption programme across several countries. E
 
 ## The business questions
 
+**[Buying-channel governance playbook](docs/buying-channel-governance.md)** — the programme story in one page, with flowcharts for opportunity qualification, route selection, the requester journey, catalogue bypass control and monthly governance. Includes [questions for discussion](docs/buying-channel-governance.md#9-questions-for-discussion).
+
 1. **How much spend is off-catalogue, by country and category?** Every non-catalogue line must be reported, so the category view has to reconcile to 100%.
 2. **Where should catalogues and contracts be built?** The goal is a prioritised list of candidates covering a target share (75%) of non-catalogue spend.
 3. **Is procurement involved where the taxonomy says it should be?** This compares the category's intended lead (procurement- or business-led) with who actually approved each requisition.
